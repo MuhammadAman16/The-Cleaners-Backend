@@ -1,7 +1,10 @@
 import express from "express";
 import mysql from "mysql";
+import bodyParser from "body-parser";
+import jwt from "jsonwebtoken";
 
 const app = express();
+app.use(bodyParser.json());
 
 const connection = mysql.createConnection({
   host: "localhost",
@@ -45,7 +48,55 @@ app.get("/api/users/:id", function (req, res) {
   );
 });
 
-app.get("/api/orders", (req, res) => {
+// Function to generate a random authentication token
+
+function generateAuthToken(user) {
+  const secretKey = "your_secret_key"; // Replace with your own secret key
+  const token = jwt.sign(user, secretKey);
+  return token;
+}
+
+// Route to handle user authentication
+app.post("/api/auth", (req, res) => {
+  const { email, password } = req.body;
+
+  authenticateUser(email, password)
+    .then((authToken) => {
+      if (authToken) {
+        res.json({ authToken });
+      } else {
+        res.status(401).json({ error: "Invalid email or password" });
+      }
+    })
+    .catch((error) => {
+      res.status(500).json({ error: "Internal Server Error" });
+    });
+});
+
+// Function to perform the authentication
+function authenticateUser(email, password) {
+  return new Promise((resolve, reject) => {
+    // Check if the email and password match in the database
+    const query = "SELECT * FROM users WHERE email = ? AND password = ?";
+    connection.query(query, [email, password], (error, results) => {
+      if (error) {
+        reject(error);
+      } else {
+        if (results.length === 0) {
+          // Authentication failed
+          resolve(null);
+        } else {
+          // Authentication succeeded
+          const user = { ...results[0] }; // Create a plain object from results[0]
+          const authToken = generateAuthToken(user);
+          resolve(authToken);
+        }
+      }
+    });
+  });
+}
+
+app.post("/api/orders", (req, res) => {
   const { images, name, address, phone, shirts, pants, instructions, userid } =
     req.body;
 
