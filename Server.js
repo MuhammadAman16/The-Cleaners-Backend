@@ -2,8 +2,11 @@ import express from "express";
 import mysql from "mysql";
 import bodyParser from "body-parser";
 import jwt from "jsonwebtoken";
+import cors from "cors";
 
 const app = express();
+
+app.use(cors());
 app.use(bodyParser.json());
 
 const connection = mysql.createConnection({
@@ -51,9 +54,15 @@ app.get("/api/users/:id", function (req, res) {
 // Function to generate a random authentication token
 
 function generateAuthToken(user) {
-  const secretKey = "your_secret_key"; // Replace with your own secret key
-  const token = jwt.sign(user, secretKey);
-  return token;
+  try {
+    const key = "secretkey";
+    const token = jwt.sign(user, key);
+    return token;
+  } catch (error) {
+    // Handle any errors that occur during token generation
+    console.log("Error generating auth token:", error);
+    return null; // or throw an error, depending on your use case
+  }
 }
 
 // Route to handle user authentication
