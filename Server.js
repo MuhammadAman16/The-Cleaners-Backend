@@ -65,7 +65,7 @@ function generateAuthToken(user) {
   }
 }
 
-// Route to handle user authentication
+// LOGIN: Route to handle user authentication
 app.post("/api/auth", (req, res) => {
   const { email, password } = req.body;
 
@@ -105,22 +105,48 @@ function authenticateUser(email, password) {
   });
 }
 
+app.post("/api/users", (req, res) => {
+  const { email, password, username } = req.body;
+
+  // Check if the email or username already exists in the database
+  const checkQuery = "SELECT * FROM users WHERE email = ? ";
+  connection.query(checkQuery, email, (error, results) => {
+    if (error) {
+      console.error("Error checking existing users:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      if (results.length > 0) {
+        // User with the same email or username already exists
+        res.status(409).json({ error: "User already exists" });
+      } else {
+        // User does not exist, proceed with registration
+        const insertQuery =
+          "INSERT INTO users (email, password, username) VALUES (?, ?, ?)";
+        connection.query(
+          insertQuery,
+          [email, password, username],
+          (error, results) => {
+            if (error) {
+              console.error("Error registering new user:", error);
+              res.status(500).json({ error: "Internal Server Error" });
+            } else {
+              res.status(201);
+            }
+          }
+        );
+      }
+    }
+  });
+});
+
+// api to post orders
 app.post("/api/orders", (req, res) => {
-  const { images, name, address, phone, shirts, pants, instructions, userid } =
+  const { userid, name, address, phone, shirts, pants, instructions } =
     req.body;
 
-  const insertQuery = `INSERT INTO orders ( images, name, address, phone, shirts, pants, instructions, userid) 
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  const values = [
-    images,
-    name,
-    address,
-    phone,
-    shirts,
-    pants,
-    instructions,
-    userid,
-  ];
+  const insertQuery = `INSERT INTO orders ( userid, name, address, phone, shirts, pants, instructions ) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  const values = [userid, name, address, phone, shirts, pants, instructions];
 
   connection.query(insertQuery, values, (error, results) => {
     if (error) {
