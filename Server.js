@@ -18,9 +18,9 @@ const connection = mysql.createConnection({
 
 connection.connect();
 
-connection.query("SELECT 1 + 1 AS solution", function (error, results, fields) {
+connection.query("SELECT 1 + 1 AS solution", function (error, result, fields) {
   if (error) throw error;
-  console.log("The solution is: ", results[0].solution);
+  console.log("The solution is: ", result[0].solution);
 });
 
 app.get("/api/users", function (req, res) {
@@ -87,16 +87,16 @@ function authenticateUser(email, password) {
   return new Promise((resolve, reject) => {
     // Check if the email and password match in the database
     const query = "SELECT * FROM users WHERE email = ? AND password = ?";
-    connection.query(query, [email, password], (error, results) => {
+    connection.query(query, [email, password], (error, result) => {
       if (error) {
         reject(error);
       } else {
-        if (results.length === 0) {
+        if (result.length === 0) {
           // Authentication failed
           resolve(null);
         } else {
           // Authentication succeeded
-          const user = { ...results[0] }; // Create a plain object from results[0]
+          const user = { ...result[0] }; // Create a plain object from result[0]
           const authToken = generateAuthToken(user);
           resolve(authToken);
         }
@@ -105,17 +105,18 @@ function authenticateUser(email, password) {
   });
 }
 
+// API TO REGISTER USERS
 app.post("/api/users", (req, res) => {
   const { email, password, username } = req.body;
 
   // Check if the email or username already exists in the database
   const checkQuery = "SELECT * FROM users WHERE email = ? ";
-  connection.query(checkQuery, email, (error, results) => {
+  connection.query(checkQuery, email, (error, result) => {
     if (error) {
       console.error("Error checking existing users:", error);
       res.status(500).json({ error: "Internal Server Error" });
     } else {
-      if (results.length > 0) {
+      if (result.length > 0) {
         // User with the same email or username already exists
         res.status(409).json({ error: "User already exists" });
       } else {
@@ -125,12 +126,13 @@ app.post("/api/users", (req, res) => {
         connection.query(
           insertQuery,
           [email, password, username],
-          (error, results) => {
+          (error, result) => {
             if (error) {
               console.error("Error registering new user:", error);
               res.status(500).json({ error: "Internal Server Error" });
             } else {
-              res.status(201);
+              console.log("Result:", result);
+              res.status(200).json({ success: true });
             }
           }
         );
@@ -148,17 +150,45 @@ app.post("/api/orders", (req, res) => {
                        VALUES (?, ?, ?, ?, ?, ?, ?)`;
   const values = [userid, name, address, phone, shirts, pants, instructions];
 
-  connection.query(insertQuery, values, (error, results) => {
+  connection.query(insertQuery, values, (error, result) => {
     if (error) {
       console.error("Error inserting data into orders:", error);
       res
         .status(500)
         .json({ error: "An error occurred while inserting data into orders." });
     } else {
-      console.log("Data inserted into orders:", results);
+      const insertedOrder = result.insertId;
+      res;
+      console.log("Data inserted into orders:", insertedOrder);
+      res.status(200).json({
+        message: "Data successfully inserted into orders.",
+        orderId: insertedOrder,
+      });
+    }
+  });
+});
+
+// RECEIPT
+app.get("/api/orders/:orderId", (req, res) => {
+  const orderId = req.params.orderId;
+
+  const selectQuery = `SELECT * FROM orders WHERE order_id = ?`;
+  const values = [orderId];
+
+  connection.query(selectQuery, values, (error, result) => {
+    if (error) {
+      console.error("Error retrieving order from the table:", error);
       res
-        .status(200)
-        .json({ message: "Data successfully inserted into orders." });
+        .status(500)
+        .json({ error: "An error occurred while retrieving the order." });
+    } else {
+      if (result.length === 0) {
+        res.status(404).json({ message: "Order not found." });
+      } else {
+        console.log("hit");
+        const order = result;
+        res.status(200).json({ order });
+      }
     }
   });
 });
