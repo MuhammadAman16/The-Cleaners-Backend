@@ -18,22 +18,17 @@ const connection = mysql.createConnection({
 
 connection.connect();
 
-connection.query("SELECT 1 + 1 AS solution", function (error, result, fields) {
-  if (error) throw error;
-  console.log("The solution is: ", result[0].solution);
-});
-
-app.get("/api/users", function (req, res) {
-  connection.query("SELECT * FROM users", function (error, rows, fields) {
+app.get("/api/users", function (res) {
+  connection.query("SELECT * FROM users", function (error, rows) {
     if (error) {
       console.log(error);
       res.status(500).json({ error: "Internal Server Error" });
     } else {
-      console.log(rows);
       res.json(rows);
     }
   });
 });
+
 app.get("/api/users/:id", function (req, res) {
   const userId = req.params.id;
   connection.query(
@@ -158,8 +153,6 @@ app.post("/api/orders", (req, res) => {
         .json({ error: "An error occurred while inserting data into orders." });
     } else {
       const insertedOrder = result.insertId;
-      res;
-      console.log("Data inserted into orders:", insertedOrder);
       res.status(200).json({
         message: "Data successfully inserted into orders.",
         orderId: insertedOrder,
@@ -185,7 +178,6 @@ app.get("/api/orders/:orderId", (req, res) => {
       if (result.length === 0) {
         res.status(404).json({ message: "Order not found." });
       } else {
-        console.log("hit");
         const order = result;
         res.status(200).json({ order });
       }
